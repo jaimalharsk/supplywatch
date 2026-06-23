@@ -697,26 +697,32 @@
     </div>
     <div id="demo-body">
       <div class="demo-line dim">$ python run_weekly.py</div>
+      <div id="demo-email-row">
+        <label>► enter recipient email:</label>
+        <input id="demo-email-input" type="email" placeholder="you@company.com" autocomplete="email">
+        <button id="demo-send-btn">Send Brief</button>
+        <div id="demo-msg"></div>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
 (function () {
-  const FORMSPREE = 'https://formspree.io/f/mvzjggpv';
+  const DEMO_API = 'https://supplywatch-demo.onrender.com/demo';
 
   const STEPS = [
-    { text: 'Step 1/3: Fetching live commodity signals…',  cls: 'white', delay: 500  },
-    { text: '  [live_scorer] Gallium: fetching price…',    cls: '',      delay: 700  },
-    { text: '  [live_scorer] Gallium: score=28  Δprice=+10.8%  news=2', cls: 'green', delay: 900 },
-    { text: '  [live_scorer] Cobalt:  score=23  Δprice=-3.0%   news=1', cls: 'green', delay: 600 },
-    { text: '  [live_scorer] Lithium: score=16  Δprice=+3.9%   news=1', cls: 'green', delay: 600 },
-    { text: 'Step 2/3: Generating report…',               cls: 'white', delay: 800  },
-    { text: '  Backend: OpenRouter (openai/gpt-oss-120b:free)', cls: '', delay: 400 },
-    { text: '  HTTP 200 OK — report generated',           cls: '',      delay: 1400 },
-    { text: '  Eval attempt 0: 20/20 [spec=5 act=5 grnd=5 conc=5] PASS', cls: 'green', delay: 900 },
-    { text: '  Report written: reports/output/2026-06-23.md', cls: '',  delay: 500  },
-    { text: 'Step 3/3: Send brief →',                     cls: 'amber', delay: 600  },
+    { text: 'Step 1/3: Fetching live commodity signals…',  cls: 'white', delay: 250  },
+    { text: '  [live_scorer] Gallium: fetching price…',    cls: '',      delay: 300  },
+    { text: '  [live_scorer] Gallium: score=28  Δprice=+10.8%  news=2', cls: 'green', delay: 350 },
+    { text: '  [live_scorer] Cobalt:  score=23  Δprice=-3.0%   news=1', cls: 'green', delay: 250 },
+    { text: '  [live_scorer] Lithium: score=16  Δprice=+3.9%   news=1', cls: 'green', delay: 250 },
+    { text: 'Step 2/3: Generating report…',               cls: 'white', delay: 350  },
+    { text: '  Backend: OpenRouter (openai/gpt-oss-120b:free)', cls: '', delay: 200 },
+    { text: '  HTTP 200 OK — report generated',           cls: '',      delay: 600  },
+    { text: '  Eval attempt 0: 20/20 [spec=5 act=5 grnd=5 conc=5] PASS', cls: 'green', delay: 400 },
+    { text: '  Report written: reports/output/2026-06-23.md', cls: '',  delay: 250  },
+    { text: 'Step 3/3: Send brief →',                     cls: 'amber', delay: 300  },
   ];
 
   let running = false;
@@ -774,20 +780,20 @@
     btn.textContent = 'Sending…';
     msg.textContent = '';
     try {
-      const res  = await fetch(FORMSPREE, {
+      const res  = await fetch(DEMO_API, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ email, source: 'demo-widget' }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
       });
       const data = await res.json();
-      if (res.ok && data.ok) {
+      if (res.ok && data.status === 'processing') {
         const body = document.getElementById('demo-body');
         const line = document.createElement('div');
         line.className = 'demo-line green';
         line.textContent = `  ✓ Brief queued for ${email}`;
         body.insertBefore(line, document.getElementById('demo-email-row'));
         body.scrollTop = body.scrollHeight;
-        msg.textContent = 'You\'re on the list — brief arrives Monday.';
+        msg.textContent = 'Pipeline running — brief arrives in ~60 seconds.';
         msg.className = 'ok';
         btn.textContent = '✓ Done';
       } else {
