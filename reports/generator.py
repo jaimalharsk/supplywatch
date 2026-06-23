@@ -153,17 +153,8 @@ class ReportGenerator:
         self._scorer_path = Path(scorer_output_path) if scorer_output_path else None
 
     def _pick_model(self) -> str:
-        """Try each model with a quick ping; return first that responds."""
-        import time
-        for model in self._models:
-            try:
-                self._raw_call(model, "ping")
-                log.info(f"Using model: {model}")
-                return model
-            except Exception as e:
-                log.warning(f"{model} unavailable: {str(e)[:60]} — trying next")
-                time.sleep(5)
-        log.warning("All models failed ping — defaulting to primary, will retry on generation")
+        """Skip ping — _call_llm handles fallback on actual failures."""
+        log.info(f"Using model: {self._models[0]}")
         return self._models[0]
 
     def load_scorer_output(self) -> list[dict[str, Any]]:

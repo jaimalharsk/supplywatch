@@ -11,6 +11,7 @@ What it does:
 
 from __future__ import annotations
 
+import argparse
 import logging
 import sys
 from datetime import date
@@ -29,6 +30,10 @@ LOGS_DIR = Path(__file__).parent / "logs"
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--fast", action="store_true", help="Skip self-eval (saves ~25s, for demos)")
+    args = parser.parse_args()
+
     LOGS_DIR.mkdir(exist_ok=True)
     log.info(f"=== SupplyWatch weekly run — {date.today()} ===")
 
@@ -49,8 +54,15 @@ def main():
     log.info("Step 2/3: Generating report…")
     try:
         from reports.generator import ReportGenerator
+        from reports.prompt_template import build_prompt_pair
         gen = ReportGenerator()
-        markdown, eval_score = gen.generate_markdown(minerals)
+        if args.fast:
+            system_prompt, user_prompt = build_prompt_pair(minerals, gen.report_date)
+            markdown = gen._call_llm(system_prompt, user_prompt)
+            eval_score = 0
+            log.info("Fast mode — eval skipped")
+        else:
+            markdown, eval_score = gen.generate_markdown(minerals)
         paths = gen.write_outputs(markdown, eval_score)
         log.info(f"Report written: {paths['md']}")
     except Exception as e:
