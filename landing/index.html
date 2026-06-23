@@ -709,7 +709,7 @@
 
 <script>
 (function () {
-  const DEMO_API = 'https://supplywatch-demo.onrender.com/demo';
+  const FORMSPREE = 'https://formspree.io/f/mvzjggpv';
 
   const STEPS = [
     { text: 'Step 1/3: Fetching live commodity signals…',  cls: 'white', delay: 250  },
@@ -780,20 +780,20 @@
     btn.textContent = 'Sending…';
     msg.textContent = '';
     try {
-      const res  = await fetch(DEMO_API, {
+      const res  = await fetch(FORMSPREE, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ email, source: 'demo-widget' }),
       });
       const data = await res.json();
-      if (res.ok && data.status === 'processing') {
+      if (res.ok && data.ok) {
         const body = document.getElementById('demo-body');
         const line = document.createElement('div');
         line.className = 'demo-line green';
         line.textContent = `  ✓ Brief queued for ${email}`;
         body.insertBefore(line, document.getElementById('demo-email-row'));
         body.scrollTop = body.scrollHeight;
-        msg.textContent = 'Pipeline running — brief arrives in ~60 seconds.';
+        msg.textContent = 'You\'re on the list — brief arrives Monday.';
         msg.className = 'ok';
         btn.textContent = '✓ Done';
       } else {
