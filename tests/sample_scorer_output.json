@@ -1,0 +1,98 @@
+[
+  {
+    "mineral": "Cobalt",
+    "iso_code": "Co",
+    "score": 78,
+    "score_delta": 12,
+    "score_direction": "up",
+    "week_ending": "2026-06-04",
+    "top_factors": [
+      {
+        "factor": "DRC export permit delays",
+        "weight": 0.42,
+        "description": "Government-imposed verification delays on artisanal mining sites have cut licensed exports by ~18% this month"
+      },
+      {
+        "factor": "Glencore Mutanda restart uncertainty",
+        "weight": 0.28,
+        "description": "Q2 production guidance revised down 15kt; restart timeline moved to Q4 2026 pending environmental review"
+      },
+      {
+        "factor": "EV battery demand surge",
+        "weight": 0.18,
+        "description": "IEA revised EV adoption forecasts up 9% for 2026, tightening the forward demand outlook"
+      }
+    ],
+    "affected_trade_routes": [
+      { "origin": "DRC", "destination": "China", "mode": "rail+sea", "status": "delayed", "volume_pct": 68 },
+      { "origin": "DRC", "destination": "Belgium", "mode": "sea", "status": "normal", "volume_pct": 14 }
+    ],
+    "price_usd_per_tonne": 33800,
+    "price_delta_pct": 6.2,
+    "data_sources": ["USGS", "LME", "UN Comtrade"]
+  },
+  {
+    "mineral": "Lithium",
+    "iso_code": "Li",
+    "score": 54,
+    "score_delta": -3,
+    "score_direction": "down",
+    "week_ending": "2026-06-04",
+    "top_factors": [
+      {
+        "factor": "Chilean SQM output increase",
+        "weight": 0.35,
+        "description": "SQM Q1 production beat by 12%; Atacama brine expansion ahead of schedule"
+      },
+      {
+        "factor": "Argentina RIGI investment approvals",
+        "weight": 0.29,
+        "description": "Three new litharge projects approved under RIGI fast-track; adds ~40kt LCE capacity by 2028"
+      },
+      {
+        "factor": "Spot price softness",
+        "weight": 0.22,
+        "description": "LCE spot at $12,400/t, down 4.1% WoW; oversupply concern from Chinese converters"
+      }
+    ],
+    "affected_trade_routes": [
+      { "origin": "Chile", "destination": "Japan", "mode": "sea", "status": "normal", "volume_pct": 31 },
+      { "origin": "Argentina", "destination": "South Korea", "mode": "sea", "status": "normal", "volume_pct": 19 }
+    ],
+    "price_usd_per_tonne": 12400,
+    "price_delta_pct": -4.1,
+    "data_sources": ["USGS", "UN Comtrade", "SGX"]
+  },
+  {
+    "mineral": "Gallium",
+    "iso_code": "Ga",
+    "score": 91,
+    "score_delta": 24,
+    "score_direction": "up",
+    "week_ending": "2026-06-04",
+    "top_factors": [
+      {
+        "factor": "China export controls expanded",
+        "weight": 0.61,
+        "description": "MOFCOM added 14 additional end-use categories requiring export license; effective June 1, 2026"
+      },
+      {
+        "factor": "No viable substitute for GaN semiconductors",
+        "weight": 0.24,
+        "description": "Gallium nitride is critical for 5G RF chips, EV chargers, radar; zero short-run substitution path"
+      },
+      {
+        "factor": "Ex-China stockpile depletion",
+        "weight": 0.11,
+        "description": "EU strategic reserve down to 4 months coverage; US NDS estimate not yet published"
+      }
+    ],
+    "affected_trade_routes": [
+      { "origin": "China", "destination": "EU", "mode": "air+sea", "status": "restricted", "volume_pct": 82 },
+      { "origin": "China", "destination": "USA", "mode": "sea", "status": "restricted", "volume_pct": 11 }
+    ],
+    "price_usd_per_tonne": 418000,
+    "price_delta_pct": 31.7,
+    "data_sources": ["USGS", "MOFCOM", "Roskill"]
+  }
+]

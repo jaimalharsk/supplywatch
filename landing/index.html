@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SupplyWatch — Critical Mineral Supply Intelligence</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0a0a0f;
+      --bg2:      #0f0f18;
+      --bg3:      #14141f;
+      --border:   #1e1e2e;
+      --green:    #00ff88;
+      --red:      #ff4455;
+      --amber:    #ffaa00;
+      --text:     #e8e8f0;
+      --muted:    #6b6b8a;
+      --mono:     'Courier New', Courier, monospace;
+      --sans:     -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    a { color: var(--green); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(10,10,15,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 56px;
+    }
+    .nav-logo {
+      font-family: var(--mono);
+      font-size: 1rem;
+      font-weight: bold;
+      color: var(--green);
+      letter-spacing: 0.05em;
+    }
+    .nav-links {
+      display: flex; gap: 28px; list-style: none;
+    }
+    .nav-links a {
+      color: var(--muted);
+      font-size: 0.85rem;
+      letter-spacing: 0.03em;
+      transition: color 0.15s;
+    }
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+    .nav-cta {
+      background: var(--green);
+      color: #000 !important;
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding: 6px 14px;
+      border-radius: 4px;
+      letter-spacing: 0.04em;
+    }
+    .nav-cta:hover { opacity: 0.88; text-decoration: none !important; }
+
+    /* ── HERO ── */
+    .hero {
+      max-width: 860px; margin: 0 auto;
+      padding: 96px 24px 72px;
+      text-align: center;
+    }
+    .hero-badge {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--green);
+      border: 1px solid var(--green);
+      padding: 3px 10px;
+      border-radius: 2px;
+      letter-spacing: 0.12em;
+      margin-bottom: 28px;
+      opacity: 0.8;
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      margin-bottom: 20px;
+    }
+    .hero h1 span { color: var(--green); }
+    .hero p {
+      font-size: 1.1rem;
+      color: var(--muted);
+      max-width: 600px;
+      margin: 0 auto 40px;
+      line-height: 1.7;
+    }
+
+    /* Waitlist form */
+    .waitlist-form {
+      display: flex; gap: 8px; justify-content: center;
+      max-width: 480px; margin: 0 auto 16px;
+    }
+    .waitlist-form input[type="email"] {
+      flex: 1;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 16px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .waitlist-form input[type="email"]:focus { border-color: var(--green); }
+    .waitlist-form input[type="email"]::placeholder { color: var(--muted); }
+    .btn-primary {
+      background: var(--green);
+      color: #000;
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+      letter-spacing: 0.03em;
+      transition: opacity 0.15s;
+    }
+    .btn-primary:hover { opacity: 0.88; }
+    .waitlist-note {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 56px;
+    }
+    #waitlist-msg {
+      font-size: 0.85rem;
+      margin-top: 8px;
+      min-height: 20px;
+    }
+    #waitlist-msg.success { color: var(--green); }
+    #waitlist-msg.error   { color: var(--red); }
+
+    /* Stats bar */
+    .stats {
+      display: flex; justify-content: center; gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      max-width: 580px;
+      margin: 0 auto;
+    }
+    .stat {
+      flex: 1;
+      padding: 16px 8px;
+      text-align: center;
+      border-right: 1px solid var(--border);
+    }
+    .stat:last-child { border-right: none; }
+    .stat-value {
+      font-family: var(--mono);
+      font-size: 1.3rem;
+      font-weight: bold;
+      color: var(--green);
+      display: block;
+    }
+    .stat-label {
+      font-size: 0.68rem;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    /* ── SECTION WRAPPER ── */
+    section { padding: 80px 24px; border-top: 1px solid var(--border); }
+    .section-inner { max-width: 900px; margin: 0 auto; }
+    .section-tag {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--green);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-bottom: 40px;
+    }
+
+    /* ── LIVE SIGNALS ── */
+    .signals-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+    }
+    .signal-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 20px;
+    }
+    .signal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 12px;
+    }
+    .signal-name {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      font-weight: bold;
+      color: var(--text);
+    }
+    .signal-score {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      font-weight: bold;
+      padding: 2px 8px;
+      border-radius: 3px;
+    }
+    .score-critical { background: rgba(255,68,85,0.15); color: var(--red); }
+    .score-elevated { background: rgba(255,170,0,0.15); color: var(--amber); }
+    .score-moderate { background: rgba(0,255,136,0.12); color: var(--green); }
+    .signal-bar-bg {
+      height: 4px; background: var(--border); border-radius: 2px; margin-bottom: 10px;
+    }
+    .signal-bar { height: 4px; border-radius: 2px; }
+    .bar-critical { background: var(--red); }
+    .bar-elevated { background: var(--amber); }
+    .bar-moderate { background: var(--green); }
+    .signal-meta {
+      font-size: 0.72rem; color: var(--muted);
+      display: flex; justify-content: space-between;
+    }
+    .signal-delta { color: var(--red); }
+    .signal-delta.down { color: var(--green); }
+
+    /* ── HOW IT WORKS ── */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .step {
+      background: var(--bg2);
+      padding: 28px 24px;
+    }
+    .step-num {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--green);
+      letter-spacing: 0.12em;
+      margin-bottom: 10px;
+    }
+    .step-title {
+      font-family: var(--mono);
+      font-size: 1rem;
+      font-weight: bold;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .step-desc {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    /* ── PRICING ── */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+    }
+    .pricing-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 28px 24px;
+      position: relative;
+    }
+    .pricing-card.featured {
+      border-color: var(--green);
+    }
+    .pricing-badge {
+      position: absolute; top: -1px; right: 20px;
+      background: var(--green); color: #000;
+      font-size: 0.65rem; font-weight: 700;
+      padding: 2px 8px; letter-spacing: 0.08em;
+      border-radius: 0 0 4px 4px;
+    }
+    .pricing-tier {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .pricing-price {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .pricing-price span {
+      font-size: 0.85rem;
+      font-weight: 400;
+      color: var(--muted);
+    }
+    .pricing-desc {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+    .pricing-features {
+      list-style: none;
+      margin-bottom: 24px;
+    }
+    .pricing-features li {
+      font-size: 0.82rem;
+      color: var(--muted);
+      padding: 4px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .pricing-features li::before {
+      content: '→ ';
+      color: var(--green);
+      font-family: var(--mono);
+    }
+    .btn-outline {
+      display: block; text-align: center;
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 0.82rem;
+      padding: 10px;
+      border-radius: 4px;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-outline:hover {
+      border-color: var(--green);
+      color: var(--green);
+      text-decoration: none;
+    }
+    .btn-green {
+      display: block; text-align: center;
+      background: var(--green); color: #000;
+      font-weight: 700; font-size: 0.82rem;
+      padding: 10px; border-radius: 4px;
+    }
+    .btn-green:hover { opacity: 0.88; text-decoration: none; }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 24px;
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    footer a { color: var(--muted); }
+    footer a:hover { color: var(--text); }
+
+    @media (max-width: 600px) {
+      .nav-links { display: none; }
+      .waitlist-form { flex-direction: column; }
+      .stats { flex-wrap: wrap; }
+      .stat { flex: 1 1 45%; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <span class="nav-logo">SUPPLY<span style="color:#fff">WATCH</span></span>
+  <ul class="nav-links">
+    <li><a href="#signals">Risk Dashboard</a></li>
+    <li><a href="#how">How It Works</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+    <li><a href="https://github.com/jaimalharsk" target="_blank">API</a></li>
+  </ul>
+  <a href="#waitlist" class="nav-links nav-cta">JOIN WAITLIST</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero" id="waitlist">
+  <div class="hero-badge">FREE WEEKLY BRIEF — BETA</div>
+  <h1>Know your supply risk<br><span>before it hits production</span></h1>
+  <p>API-first critical mineral intelligence for manufacturing and electronics companies.
+     Monitor disruption signals, get automated alerts, protect your supply chain.</p>
+
+  <form class="waitlist-form" onsubmit="submitWaitlist(event)">
+    <input type="email" id="email-input" placeholder="your@company.com" required>
+    <button type="submit" class="btn-primary">GET WEEKLY BRIEF</button>
+  </form>
+  <div id="waitlist-msg"></div>
+  <p class="waitlist-note">Weekly critical mineral disruption briefs, free during beta. No spam.</p>
+
+  <div class="stats">
+    <div class="stat">
+      <span class="stat-value">12</span>
+      <span class="stat-label">Minerals Tracked</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value">3</span>
+      <span class="stat-label">Data Sources</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value">6h</span>
+      <span class="stat-label">Update Frequency</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value">REST</span>
+      <span class="stat-label">API Protocol</span>
+    </div>
+  </div>
+</div>
+
+<!-- LIVE SIGNALS -->
+<section id="signals">
+  <div class="section-inner">
+    <div class="section-tag">// LIVE INTELLIGENCE</div>
+    <div class="section-title">Critical Mineral Risk Signals</div>
+    <div class="signals-grid">
+
+      <div class="signal-card">
+        <div class="signal-header">
+          <span class="signal-name">Gallium (Ga)</span>
+          <span class="signal-score score-critical">CRITICAL</span>
+        </div>
+        <div class="signal-bar-bg">
+          <div class="signal-bar bar-critical" style="width:91%"></div>
+        </div>
+        <div class="signal-meta">
+          <span>Score: 91/100</span>
+          <span class="signal-delta">▲ +24 this week</span>
+        </div>
+      </div>
+
+      <div class="signal-card">
+        <div class="signal-header">
+          <span class="signal-name">Cobalt (Co)</span>
+          <span class="signal-score score-elevated">ELEVATED</span>
+        </div>
+        <div class="signal-bar-bg">
+          <div class="signal-bar bar-elevated" style="width:78%"></div>
+        </div>
+        <div class="signal-meta">
+          <span>Score: 78/100</span>
+          <span class="signal-delta">▲ +12 this week</span>
+        </div>
+      </div>
+
+      <div class="signal-card">
+        <div class="signal-header">
+          <span class="signal-name">Lithium (Li)</span>
+          <span class="signal-score score-moderate">MODERATE</span>
+        </div>
+        <div class="signal-bar-bg">
+          <div class="signal-bar bar-moderate" style="width:54%"></div>
+        </div>
+        <div class="signal-meta">
+          <span>Score: 54/100</span>
+          <span class="signal-delta down">▼ −3 this week</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="section-inner">
+    <div class="section-tag">// PROCESS</div>
+    <div class="section-title">How SupplyWatch Works</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01 — INGEST</div>
+        <div class="step-title">Multi-source Data Pull</div>
+        <div class="step-desc">USGS, UN Comtrade, and sanctions feeds ingested every 6 hours. Structured, normalised, versioned.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">02 — SCORE</div>
+        <div class="step-title">Disruption Scoring</div>
+        <div class="step-desc">Per-mineral risk scores weighted by trade route exposure, price volatility, and geopolitical signals.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">03 — ALERT</div>
+        <div class="step-title">Threshold Alerts</div>
+        <div class="step-desc">Score crossings trigger webhook alerts to your systems. Configurable thresholds per mineral.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">04 — DIGEST</div>
+        <div class="step-title">Weekly Summary</div>
+        <div class="step-desc">AI-generated brief every Monday: what moved, why, what to do. Delivered by email and published to Substack.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing">
+  <div class="section-inner">
+    <div class="section-tag">// PRICING</div>
+    <div class="section-title">Simple, Usage-Based Pricing</div>
+    <div class="pricing-grid">
+
+      <div class="pricing-card">
+        <div class="pricing-tier">Free</div>
+        <div class="pricing-price">$0<span>/mo</span></div>
+        <div class="pricing-desc">Weekly brief + basic API access. No credit card required.</div>
+        <ul class="pricing-features">
+          <li>Weekly disruption brief</li>
+          <li>100 API req/day</li>
+          <li>7-day score history</li>
+          <li>3 minerals monitored</li>
+        </ul>
+        <a href="#waitlist" class="btn-outline">Join Waitlist</a>
+      </div>
+
+      <div class="pricing-card featured">
+        <div class="pricing-badge">MOST POPULAR</div>
+        <div class="pricing-tier">Pro</div>
+        <div class="pricing-price">$49<span>/mo</span></div>
+        <div class="pricing-desc">Full API access + webhooks. For active procurement teams.</div>
+        <ul class="pricing-features">
+          <li>Everything in Free</li>
+          <li>10,000 API req/day</li>
+          <li>90-day score history</li>
+          <li>All 12 minerals</li>
+          <li>Webhook alerts</li>
+        </ul>
+        <a href="#waitlist" class="btn-green">Join Waitlist</a>
+      </div>
+
+      <div class="pricing-card">
+        <div class="pricing-tier">Enterprise</div>
+        <div class="pricing-price">Custom</div>
+        <div class="pricing-desc">On-prem deployment, SLA, custom mineral coverage.</div>
+        <ul class="pricing-features">
+          <li>Everything in Pro</li>
+          <li>Unlimited API requests</li>
+          <li>On-prem option</li>
+          <li>Custom SLA</li>
+          <li>Dedicated support</li>
+        </ul>
+        <a href="mailto:malharsatishkumar@gmail.com" class="btn-outline">Contact Us</a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <p style="margin-bottom:8px">
+    Built by <a href="https://github.com/jaimalharsk" target="_blank">@jaimalharsk</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/jaimalharsk" target="_blank">GitHub</a>
+    &nbsp;·&nbsp;
+    MIT License
+  </p>
+  <p style="color:#3a3a5c">SupplyWatch Beta — free during early access</p>
+</footer>
+
+<script>
+  async function submitWaitlist(e) {
+    e.preventDefault();
+    const email = document.getElementById('email-input').value.trim();
+    const msg   = document.getElementById('waitlist-msg');
+
+    msg.textContent = 'Joining…';
+    msg.className   = '';
+
+    try {
+      const res  = await fetch('https://formspree.io/f/mvzjggpv', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body:    JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        msg.textContent = "✓ You're on the list — brief arrives Monday.";
+        msg.className   = 'success';
+        document.getElementById('email-input').value = '';
+      } else {
+        msg.textContent = data.error || 'Something went wrong. Try again.';
+        msg.className   = 'error';
+      }
+    } catch {
+      msg.textContent = 'Could not connect. Try again shortly.';
+      msg.className   = 'error';
+    }
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+reports/output/
+reports/eval_log.jsonl
+landing/emails.csv
+logs/
