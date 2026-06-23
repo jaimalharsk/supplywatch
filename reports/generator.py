@@ -17,7 +17,6 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-from google import genai
 from dotenv import load_dotenv
 
 from .evaluator import ReportEvaluator, MAX_RETRIES
@@ -28,11 +27,17 @@ load_dotenv()
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
-# Primary model + ordered fallbacks tried on 503/unavailable
-MODELS = [
+OPENROUTER_BASE = "https://openrouter.ai/api/v1"
+OPENROUTER_MODELS = [
+    "openai/gpt-oss-120b:free",
+    "nvidia/nemotron-3-super-120b-a12b:free",
+    "google/gemma-4-31b-it:free",
+]
+
+# Gemini fallback (used only if OPENROUTER_API_KEY is absent)
+GEMINI_MODELS = [
     "gemini-2.5-flash",
-    "gemini-2.5-pro",
-    "gemini-2.0-flash",
+    "gemini-2.5-flash-lite",
 ]
 OUTPUT_DIR = Path(__file__).parent / "output"
 
@@ -122,34 +127,44 @@ class ReportGenerator:
         output_dir: str | Path | None = None,
         report_date: date | None = None,
     ):
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            raise EnvironmentError("GEMINI_API_KEY not set")
+        or_key = os.getenv("OPENROUTER_API_KEY")
+        gemini_key = os.getenv("GEMINI_API_KEY")
 
-        self.client = genai.Client(api_key=api_key)
-        self._model  = self._pick_model()
-        self.evaluator = ReportEvaluator(self.client, self._model)
+        if or_key:
+            from openai import OpenAI
+            self.client = OpenAI(base_url=OPENROUTER_BASE, api_key=or_key)
+            self._backend = "openrouter"
+            self._models = OPENROUTER_MODELS
+            log.info("Backend: OpenRouter")
+        elif gemini_key:
+            from google import genai as _genai
+            self.client = _genai.Client(api_key=gemini_key)
+            self._backend = "gemini"
+            self._models = GEMINI_MODELS
+            log.info("Backend: Gemini (fallback)")
+        else:
+            raise EnvironmentError("Set OPENROUTER_API_KEY (or GEMINI_API_KEY) in .env")
+
+        self._model = self._pick_model()
+        self.evaluator = ReportEvaluator(self.client, self._model, self._backend)
         self.output_dir = Path(output_dir or OUTPUT_DIR)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.report_date = report_date or date.today()
         self._scorer_path = Path(scorer_output_path) if scorer_output_path else None
 
     def _pick_model(self) -> str:
-        """Returns first model in MODELS that responds to a ping. Falls back down the list."""
-        from google.genai.errors import ServerError, ClientError
-        for model in MODELS:
+        """Try each model with a quick ping; return first that responds."""
+        import time
+        for model in self._models:
             try:
-                self.client.models.generate_content(model=model, contents="ping")
+                self._raw_call(model, "ping")
                 log.info(f"Using model: {model}")
                 return model
-            except ServerError:
-                log.warning(f"{model} unavailable (503), trying next…")
-            except ClientError as e:
-                if "429" in str(e):
-                    log.warning(f"{model} quota exhausted, trying next…")
-                else:
-                    log.warning(f"{model} error: {e}, trying next…")
-        raise EnvironmentError(f"All models unavailable: {MODELS}")
+            except Exception as e:
+                log.warning(f"{model} unavailable: {str(e)[:60]} — trying next")
+                time.sleep(5)
+        log.warning("All models failed ping — defaulting to primary, will retry on generation")
+        return self._models[0]
 
     def load_scorer_output(self) -> list[dict[str, Any]]:
         if self._scorer_path:
@@ -159,10 +174,38 @@ class ReportGenerator:
             "Live API ingestion not wired yet — pass scorer_output_path for now"
         )
 
+    def _raw_call(self, model: str, content: str) -> str:
+        """Single LLM call, backend-agnostic."""
+        if self._backend == "openrouter":
+            resp = self.client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": content}],
+            )
+            return resp.choices[0].message.content
+        else:
+            resp = self.client.models.generate_content(model=model, contents=content)
+            return resp.text
+
     def _call_llm(self, system_prompt: str, user_prompt: str) -> str:
+        import time
         combined = f"{system_prompt}\n\n---\n\n{user_prompt}"
-        response = self.client.models.generate_content(model=self._model, contents=combined)
-        return response.text
+        waits = [15, 30, 60]
+        for model in self._models:
+            for attempt, wait in enumerate(waits):
+                try:
+                    result = self._raw_call(model, combined)
+                    if model != self._model:
+                        log.info(f"Switched to: {model}")
+                        self._model = model
+                    return result
+                except Exception as e:
+                    err = str(e)
+                    if "429" in err:
+                        log.warning(f"{model} quota — skipping")
+                        break
+                    log.warning(f"{model} error (attempt {attempt+1}/{len(waits)}), retrying in {wait}s…")
+                    time.sleep(wait)
+        raise EnvironmentError("All models failed — check API keys or try again later")
 
     def generate_markdown(self, minerals: list[dict[str, Any]]) -> tuple[str, int]:
         """

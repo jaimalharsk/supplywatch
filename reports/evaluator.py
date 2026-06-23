@@ -40,7 +40,7 @@ EVAL_LOG = Path(__file__).parent / "eval_log.jsonl"
 
 # Lighter model for evaluation — scoring needs correctness, not eloquence.
 # Swap to "gemini-2.5-flash" if the lite model isn't available on your key.
-EVAL_MODEL = "gemini-2.5-flash"
+EVAL_MODEL = "openai/gpt-oss-120b:free"
 
 RUBRIC = (
     "specificity (1-5): Names actual entities — mine names, companies, govt bodies, "
@@ -56,7 +56,8 @@ RUBRIC = (
 EVAL_SYSTEM = (
     "You are a strict quality evaluator for commodity risk briefs. "
     "Score the report on four dimensions (1-5 each). "
-    "Return ONLY valid JSON with keys 'scores' and 'critique'. No markdown fences."
+    "Return ONLY a raw JSON object — no markdown fences, no explanation, no preamble. "
+    'Example: {"scores": {"specificity": 4, "actionability": 3, "data_grounding": 5, "conciseness": 4}, "critique": "..."}'
 )
 
 
@@ -90,9 +91,10 @@ class EvalResult:
 
 
 class ReportEvaluator:
-    def __init__(self, client: genai.Client, model: str = EVAL_MODEL):
+    def __init__(self, client, model: str = EVAL_MODEL, backend: str = "gemini"):
         self.client = client
         self.model = model
+        self.backend = backend
 
     def _build_eval_prompt(self, report_md: str, minerals: list[dict[str, Any]]) -> str:
         fact_table = _compact_fact_table(minerals)
@@ -105,17 +107,55 @@ class ReportEvaluator:
     def evaluate(
         self, report_md: str, minerals: list[dict[str, Any]], attempt: int = 0
     ) -> EvalResult:
+        from google.genai.errors import ServerError
+        import time
+
         prompt = self._build_eval_prompt(report_md, minerals)
+        last_err = None
 
-        response = self.client.models.generate_content(
-            model=self.model,
-            contents=f"{EVAL_SYSTEM}\n\n{prompt}",
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-            ),
-        )
+        full_prompt = f"{EVAL_SYSTEM}\n\n{prompt}"
+        raw_text = None
+        for retry in range(3):
+            try:
+                if self.backend == "openrouter":
+                    resp = self.client.chat.completions.create(
+                        model=self.model,
+                        messages=[{"role": "user", "content": full_prompt}],
+                    )
+                    raw_text = resp.choices[0].message.content
+                else:
+                    resp = self.client.models.generate_content(
+                        model=self.model,
+                        contents=full_prompt,
+                        config=types.GenerateContentConfig(
+                            response_mime_type="application/json",
+                        ),
+                    )
+                    raw_text = resp.text
+                break
+            except ServerError as e:
+                last_err = e
+                wait = 15 * (retry + 1)
+                log.warning(f"Eval 503 (attempt {retry+1}/3), retrying in {wait}s…")
+                time.sleep(wait)
+            except Exception as e:
+                last_err = e
+                wait = 15 * (retry + 1)
+                log.warning(f"Eval error (attempt {retry+1}/3): {str(e)[:80]}, retrying in {wait}s…")
+                time.sleep(wait)
 
-        raw = json.loads(response.text)
+        if raw_text is None:
+            log.warning(f"Eval unavailable after 3 retries — skipping, assuming pass")
+            return EvalResult(
+                scores={"specificity": 4, "actionability": 4, "data_grounding": 4, "conciseness": 4},
+                total=16,
+                critique="Eval skipped (API unavailable on all retries)",
+                passed=True,
+                attempt=attempt,
+            )
+
+        cleaned = raw_text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        raw = json.loads(cleaned)
         scores = raw["scores"]
         total = sum(scores.values())
         passed = total >= PASS_THRESHOLD

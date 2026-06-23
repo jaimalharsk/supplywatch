@@ -44,7 +44,16 @@ def main():
         log.error(f"Report generation failed: {e}")
         sys.exit(1)
 
-    # Step 2: post to Substack + Reddit
+    # Step 2a: email the brief to whoever is watching
+    md_text = paths["md"].read_text()
+    report_date_str = paths["md"].stem
+    try:
+        from pipeline.email_sender import EmailSender
+        EmailSender().prompt_and_send(md_text, report_date_str)
+    except Exception as e:
+        log.warning(f"Email skipped: {e}")
+
+    # Step 2b: post to Substack + Reddit
     log.info("Step 2/2: Posting pipeline…")
     try:
         from pipeline.scheduler import run as pipeline_run

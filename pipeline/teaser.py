@@ -34,9 +34,11 @@ def _first_sentence(text: str) -> str:
 def _first_action(md: str) -> str:
     actions = _extract_section(md, "Recommended Actions")
     for line in actions.splitlines():
-        m = re.match(r"^\d+\.\s+(?:\*\*[^*]+\*\*:?\s*)?(.+)", line.strip())
+        m = re.match(r"^\d+\.\s+(.+)", line.strip())
         if m:
-            return m.group(1).strip()
+            # Strip bold markers but keep the text inside them
+            text = re.sub(r"\*\*([^*]+)\*\*", r"\1", m.group(1)).strip()
+            return _first_sentence(text)
     return ""
 
 
@@ -63,6 +65,19 @@ def _mineral_bullets(md: str) -> list[str]:
 
 
 # ── Substack (60-second bite) ─────────────────────────────────────────────────
+
+def email_subject(md: str, report_date: str) -> str:
+    """~7-word email subject: top mineral + short date."""
+    from datetime import datetime
+    what_moved = _extract_section(md, "What Moved")
+    m = re.search(r"### ([A-Za-z]+)", what_moved)
+    mineral = m.group(1) if m else "Critical minerals"
+    try:
+        short_date = datetime.strptime(report_date, "%Y-%m-%d").strftime("%b %-d")
+    except Exception:
+        short_date = report_date
+    return f"SupplyWatch — {mineral} alert | {short_date}"
+
 
 def substack_title(md: str, report_date: str) -> str:
     summary = _extract_section(md, "Executive Summary")
