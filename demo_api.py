@@ -18,7 +18,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import BackgroundTasks, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, EmailStr
+import re
+from pydantic import BaseModel
 
 load_dotenv()
 sys.path.insert(0, str(Path(__file__).parent))
@@ -37,7 +38,10 @@ app.add_middleware(
 
 
 class DemoRequest(BaseModel):
-    email: EmailStr
+    email: str
+
+    def valid_email(self) -> bool:
+        return bool(re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", self.email))
 
 
 @app.get("/health")
@@ -47,6 +51,8 @@ def health():
 
 @app.post("/demo")
 async def run_demo(payload: DemoRequest, background_tasks: BackgroundTasks):
+    if not payload.valid_email():
+        return {"status": "error", "message": "Invalid email address."}
     background_tasks.add_task(_pipeline, payload.email)
     return {
         "status": "processing",
