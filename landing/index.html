@@ -611,5 +611,196 @@
   }
 </script>
 
+<!-- ── Demo terminal widget ───────────────────────────────────────────── -->
+<style>
+  #demo-fab {
+    position: fixed; bottom: 28px; right: 28px; z-index: 999;
+    background: var(--green); color: #000; font-family: var(--mono);
+    font-size: 0.8rem; font-weight: 700; letter-spacing: 0.05em;
+    border: none; border-radius: 4px; padding: 10px 18px;
+    cursor: pointer; box-shadow: 0 0 18px rgba(0,255,136,0.35);
+    transition: box-shadow 0.2s;
+  }
+  #demo-fab:hover { box-shadow: 0 0 28px rgba(0,255,136,0.6); }
+
+  #demo-overlay {
+    display: none; position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,0.65); align-items: center; justify-content: center;
+  }
+  #demo-overlay.open { display: flex; }
+
+  #demo-window {
+    width: min(560px, 94vw); background: #0d0d0d;
+    border: 1px solid #2a2a2a; border-radius: 8px;
+    box-shadow: 0 0 40px rgba(0,255,136,0.12); overflow: hidden;
+    font-family: var(--mono); font-size: 0.82rem;
+  }
+
+  #demo-titlebar {
+    background: #1a1a1a; padding: 9px 14px;
+    display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #2a2a2a;
+  }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .dot-r { background: #ff5f57; }
+  .dot-y { background: #febc2e; }
+  .dot-g { background: #28c840; }
+  #demo-titlebar span { color: #555; font-size: 0.75rem; margin-left: 6px; }
+  #demo-close {
+    margin-left: auto; background: none; border: none;
+    color: #555; font-size: 1rem; cursor: pointer; line-height: 1;
+  }
+  #demo-close:hover { color: #fff; }
+
+  #demo-body { padding: 16px; min-height: 240px; max-height: 420px; overflow-y: auto; }
+
+  .demo-line { color: #888; margin-bottom: 4px; white-space: pre-wrap; }
+  .demo-line.green  { color: var(--green); }
+  .demo-line.amber  { color: var(--amber); }
+  .demo-line.white  { color: #fff; }
+  .demo-line.dim    { color: #444; }
+
+  #demo-email-row {
+    display: none; margin-top: 12px;
+    border-top: 1px solid #1e1e1e; padding-top: 12px;
+  }
+  #demo-email-row label { color: var(--green); display: block; margin-bottom: 6px; }
+  #demo-email-input {
+    width: 100%; background: #111; border: 1px solid #2a2a2a;
+    color: #fff; font-family: var(--mono); font-size: 0.82rem;
+    padding: 7px 10px; border-radius: 3px; outline: none;
+  }
+  #demo-email-input:focus { border-color: var(--green); }
+  #demo-send-btn {
+    margin-top: 8px; background: var(--green); color: #000;
+    font-family: var(--mono); font-weight: 700; font-size: 0.8rem;
+    border: none; padding: 7px 16px; border-radius: 3px; cursor: pointer; width: 100%;
+  }
+  #demo-send-btn:disabled { opacity: 0.4; cursor: default; }
+  #demo-msg { margin-top: 8px; font-size: 0.78rem; }
+  #demo-msg.ok  { color: var(--green); }
+  #demo-msg.err { color: var(--red); }
+
+  .cursor::after { content: '▌'; animation: blink 1s step-end infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+</style>
+
+<button id="demo-fab" onclick="openDemo()">▶ Run Demo</button>
+
+<div id="demo-overlay">
+  <div id="demo-window">
+    <div id="demo-titlebar">
+      <div class="dot dot-r"></div>
+      <div class="dot dot-y"></div>
+      <div class="dot dot-g"></div>
+      <span>supplywatch — pipeline demo</span>
+      <button id="demo-close" onclick="closeDemo()">✕</button>
+    </div>
+    <div id="demo-body">
+      <div class="demo-line dim">$ python run_weekly.py</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const FORMSPREE = 'https://formspree.io/f/mvzjggpv';
+
+  const STEPS = [
+    { text: 'Step 1/3: Fetching live commodity signals…',  cls: 'white', delay: 500  },
+    { text: '  [live_scorer] Gallium: fetching price…',    cls: '',      delay: 700  },
+    { text: '  [live_scorer] Gallium: score=28  Δprice=+10.8%  news=2', cls: 'green', delay: 900 },
+    { text: '  [live_scorer] Cobalt:  score=23  Δprice=-3.0%   news=1', cls: 'green', delay: 600 },
+    { text: '  [live_scorer] Lithium: score=16  Δprice=+3.9%   news=1', cls: 'green', delay: 600 },
+    { text: 'Step 2/3: Generating report…',               cls: 'white', delay: 800  },
+    { text: '  Backend: OpenRouter (openai/gpt-oss-120b:free)', cls: '', delay: 400 },
+    { text: '  HTTP 200 OK — report generated',           cls: '',      delay: 1400 },
+    { text: '  Eval attempt 0: 20/20 [spec=5 act=5 grnd=5 conc=5] PASS', cls: 'green', delay: 900 },
+    { text: '  Report written: reports/output/2026-06-23.md', cls: '',  delay: 500  },
+    { text: 'Step 3/3: Send brief →',                     cls: 'amber', delay: 600  },
+  ];
+
+  let running = false;
+
+  window.openDemo = function () {
+    if (running) { document.getElementById('demo-overlay').classList.add('open'); return; }
+    document.getElementById('demo-overlay').classList.add('open');
+    runAnimation();
+  };
+
+  window.closeDemo = function () {
+    document.getElementById('demo-overlay').classList.remove('open');
+  };
+
+  document.getElementById('demo-overlay').addEventListener('click', function (e) {
+    if (e.target === this) closeDemo();
+  });
+
+  function runAnimation () {
+    running = true;
+    const body = document.getElementById('demo-body');
+    let i = 0;
+
+    function next () {
+      if (i >= STEPS.length) {
+        showEmailRow();
+        return;
+      }
+      const s = STEPS[i++];
+      const line = document.createElement('div');
+      line.className = 'demo-line ' + (s.cls || '');
+      line.textContent = s.text;
+      body.appendChild(line);
+      body.scrollTop = body.scrollHeight;
+      setTimeout(next, s.delay);
+    }
+    setTimeout(next, 300);
+  }
+
+  function showEmailRow () {
+    const row = document.getElementById('demo-email-row');
+    row.style.display = 'block';
+    document.getElementById('demo-body').appendChild(row);
+    document.getElementById('demo-email-input').focus();
+  }
+
+  document.getElementById('demo-send-btn').addEventListener('click', async function () {
+    const email = document.getElementById('demo-email-input').value.trim();
+    const msg   = document.getElementById('demo-msg');
+    const btn   = this;
+    if (!/[^@\s]+@[^@\s]+\.[^@\s]+/.test(email)) {
+      msg.textContent = 'Enter a valid email.'; msg.className = 'err'; return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    msg.textContent = '';
+    try {
+      const res  = await fetch(FORMSPREE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ email, source: 'demo-widget' }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        const body = document.getElementById('demo-body');
+        const line = document.createElement('div');
+        line.className = 'demo-line green';
+        line.textContent = `  ✓ Brief queued for ${email}`;
+        body.insertBefore(line, document.getElementById('demo-email-row'));
+        body.scrollTop = body.scrollHeight;
+        msg.textContent = 'You\'re on the list — brief arrives Monday.';
+        msg.className = 'ok';
+        btn.textContent = '✓ Done';
+      } else {
+        throw new Error('not ok');
+      }
+    } catch {
+      msg.textContent = 'Could not send — try the waitlist form below.';
+      msg.className = 'err';
+      btn.disabled = false; btn.textContent = 'Send Brief';
+    }
+  });
+})();
+</script>
+
 </body>
 </html>

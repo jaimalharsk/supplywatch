@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 
-WAITLIST_URL = "https://supplywatch.io"  # update when landing page is live
+WAITLIST_URL = "https://supplywatch.netlify.app"
 
 REDDIT_TARGETS = [
     "supplychain",
