@@ -6,3 +6,7 @@ reports/output/
 reports/eval_log.jsonl
 landing/emails.csv
 logs/
+supplywatch/.venv/
+supplywatch/.venv-pm/
+supplywatch/.venv-ra/
+api-tests-restassured/target/

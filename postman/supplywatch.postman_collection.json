@@ -1,0 +1,307 @@
+{
+  "info": {
+    "_postman_id": "b6f1a2b4-3f0a-4c1e-9d2a-8a9a3e1f7c10",
+    "name": "SupplyWatch API",
+    "description": "End-to-end smoke test suite for the SupplyWatch FastAPI service: health check, API key issuance, auth enforcement, materials listing, signal/history lookups, and alert subscription flow. Requests run in order and chain via the `apiKey` collection variable.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Health status is ok', function () {",
+              "    var json = pm.response.json();",
+              "    pm.expect(json.data.status).to.eql('ok');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["health"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create API Key",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200 or 201', function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+              "});",
+              "",
+              "var json = pm.response.json();",
+              "",
+              "pm.test('api_key starts with sw_', function () {",
+              "    pm.expect(json.data.api_key).to.be.a('string');",
+              "    pm.expect(json.data.api_key.indexOf('sw_')).to.eql(0);",
+              "});",
+              "",
+              "pm.collectionVariables.set('apiKey', json.data.api_key);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"company_name\": \"Newman CI Test\",\n    \"tier\": \"free\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/keys",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "keys"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "List Materials (no key -> 401)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 401 without API key', function () {",
+              "    pm.response.to.have.status(401);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/materials",
+          "host": ["{{baseUrl}}"],
+          "path": ["materials"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "List Materials (with key)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "var json = pm.response.json();",
+              "",
+              "pm.test('data is an array of length 8', function () {",
+              "    pm.expect(json.data).to.be.an('array');",
+              "    pm.expect(json.data.length).to.eql(8);",
+              "});",
+              "",
+              "pm.test('Gallium is present', function () {",
+              "    var names = json.data.map(function (m) { return m.name; });",
+              "    pm.expect(names).to.include('Gallium');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/materials",
+          "host": ["{{baseUrl}}"],
+          "path": ["materials"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Material Signal (not yet scored -> 404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 404 (no scoring job has run yet)', function () {",
+              "    pm.response.to.have.status(404);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/materials/1/signal",
+          "host": ["{{baseUrl}}"],
+          "path": ["materials", "1", "signal"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Material History (empty)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('data is an empty array', function () {",
+              "    var json = pm.response.json();",
+              "    pm.expect(json.data).to.be.an('array').that.is.empty;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/materials/1/history",
+          "host": ["{{baseUrl}}"],
+          "path": ["materials", "1", "history"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Subscribe to Alert",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('data.id is present', function () {",
+              "    var json = pm.response.json();",
+              "    pm.expect(json.data.id).to.exist;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"material_id\": 1,\n    \"threshold\": 65,\n    \"email\": \"ci-test@example.com\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/alerts/subscribe",
+          "host": ["{{baseUrl}}"],
+          "path": ["alerts", "subscribe"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Alert History",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('data is an array', function () {",
+              "    var json = pm.response.json();",
+              "    pm.expect(json.data).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/alerts/history",
+          "host": ["{{baseUrl}}"],
+          "path": ["alerts", "history"]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "apiKey",
+      "value": ""
+    }
+  ]
+}
